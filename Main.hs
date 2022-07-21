@@ -8,7 +8,7 @@ alpha = 1
 
 {-myGraph :: Graph
 myGraph = buildG bounds edges
-  where
+ where
      bounds = (1,4)
      edges  = [ (1,3), (1,4)
               , (2,3), (2,4)
@@ -39,6 +39,14 @@ mytest a b = res + 10
 
 ldense nodenum dgr = dgr / (nodenum - 1)
 
+getLabel (a,_,_) = a
+getNid (_,a,_)   = a
+getNgh (_,_,a)   = a
+
+
+neighbors' nid  = fmap nodeFromVertex neighborsIDs
+  where
+    neighborsIDs = getNgh $ nodeFromVertex nid
 
 neighborSearch graph idx = Prelude.map (\i -> (i, (!) graph i) ) idx
 
@@ -75,7 +83,16 @@ median x =
 data WNode a b = WNode {nid :: Vertex, weight :: b} 
   deriving (Eq,Ord,Show)
 
-modWeight f a = WNode (nid a) (f $ weight a) 
+{-data Focal a b c =  Focal {
+                          nid    :: a, -- node ID
+                          label  :: b, -- node label
+                          weight :: c  -- node weight
+                          } deriving Show
+-}
+
+modWeight f a = WNode (nid a) (f $ weight a)
+
+  
 
 --data WEdge a b c  = WEdge {src :: a, dst :: b, weight :: c}
 --  deriving (Eq, Ord, Show)  
@@ -84,7 +101,12 @@ modWeight f a = WNode (nid a) (f $ weight a)
 infdet graph = Prelude.map (\elem -> (influence' 100) <$>  [elem] <*> neighborSearch graph (snd elem) ) $ assocs graph
 
 
-massassign xs = Prelude.map (\x -> modWeight (phi medianValue) x) xs 
+gamma f xs = 1 / (median eta)
   where
-    medianValue = median $ Prelude.map (\x -> weight x) xs
-
+    eta = Prelude.map (\elem -> f . weight $ snd elem ) xs
+ 
+   
+{-massassign xs = Prelude.map (\x -> modWeight (phi gammaV) x) xs
+  where
+   gammaV = gamma (\y -> (1-y) / y) xs
+-}
