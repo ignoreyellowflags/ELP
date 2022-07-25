@@ -2,6 +2,8 @@ import Data.Graph
 import qualified Data.Set as Set
 import Data.Array
 import Data.List (sort) 
+import Control.Applicative
+
 
 alpha = 1
 --Representing a graph from a list of edges
@@ -29,7 +31,14 @@ myGraph :: Graph
 main = do 
   putStrLn $ "The edges are " ++ (show.edges) myGraph
   putStrLn $ "The vertices are " ++ (show.vertices) myGraph
-
+  
+  let neighborVertex = map (\idx -> (nodeFromVertex idx, getNgh $ nodeFromVertex idx) ) $ indices myGraph
+  
+  let neighborSet    = map (\elem -> (fst elem, fmap nodeFromVertex $ snd elem) ) neighborVertex :: [(LNode [Char],[LNode [Char] ])]
+  
+  let influenceSet   = map (\elem -> ( getNid $ fst elem , (influence 100) <$> [fst elem] <*> snd elem) )  neighborSet
+ 
+  putStrLn $ "kl " ++ (show influenceSet) 
 
 mytest a b = res + 10
   where
@@ -39,18 +48,61 @@ mytest a b = res + 10
 
 ldense nodenum dgr = dgr / (nodenum - 1)
 
-getLabel (a,_,_) = a
-getNid (_,a,_)   = a
-getNgh (_,_,a)   = a
+getLbl (a,_,_) = a
+
+getNid (_,a,_) = a
+
+getNgh (_,_,a) = a 
+
+data WNode = WNode {
+                   lbl :: [Char],
+                   nid :: Integer,
+                   ngh :: [Integer]
+                   } deriving Show 
 
 
-neighbors' nid  = fmap nodeFromVertex neighborsIDs
+
+
+--neighbors'  :: (Vertex -> LNode [Char]) -> Vertex -> [LNode [Char] ]
+--neighbors' f nid = fmap f neighborIDs
+--  where 
+--    neighborIDs = getthd $ nodeFromVertex nid
+
+
+--neighborSearch graph idx = Prelude.map (\i -> (i, (!) graph i) ) idx
+
+
+type LNode a = (a, Vertex, [Vertex]) 
+
+sim u v = setInter / setUnion
   where
-    neighborsIDs = getNgh $ nodeFromVertex nid
+    uset = Set.fromList $ getNgh u
+    vset = Set.fromList $ getNgh v
+    setInter = fromIntegral . Set.size $ uset `Set.intersection` vset
+    setUnion = (+1) . fromIntegral . Set.size $ uset `Set.union` vset
 
-neighborSearch graph idx = Prelude.map (\i -> (i, (!) graph i) ) idx
+influence nodenum  u v = sim u v * (/) vDense uDense
+  where
+    vDense = ldense nodenum (fromIntegral $ length (getNgh v))
+    uDense = ldense nodenum (fromIntegral $ length (getNgh u))
 
-sim u v = nominator / denominator
+
+--sim' :: (Fractional b, Ord a) => [a] -> [a] -> b
+sim' u v = setInter / setUnion
+  where 
+    uset     = Set.fromList $ u
+    vset     = Set.fromList $ v
+    setInter = fromIntegral . Set.size $ uset `Set.intersection` vset
+    setUnion = (+1) . fromIntegral . Set.size $ uset `Set.union` vset
+    
+influence' nodenum u v = sim' u v * (/) vDense uDense
+  where
+    vDense = ldense nodenum (fromIntegral $ length v ) 
+    uDense = ldense nodenum (fromIntegral $ length u )
+
+
+
+{-sim u v = nominator / denominator
   where
     uNgh = Set.fromList $ snd u
     vNgh = Set.fromList $ snd v 
@@ -62,15 +114,24 @@ influence nodenum  u v = sim u v * (/) vDense uDense
   where
     uDense = ldense nodenum (fromIntegral ( length $ snd u) )
     vDense = ldense nodenum (fromIntegral ( length $ snd v) )
-
-influence' nodenum  u v = (fst u, WNode (fst u) res )
+-}
+{-influence' nodenum  u v = (fst u, WNode (fst u) res )
   where
     uDense = ldense nodenum (fromIntegral ( length $ snd u) )
     vDense = ldense nodenum (fromIntegral ( length $ snd v) )
     res    = sim u v * (/) vDense uDense
+-}
 
+--phi gamma infvalue = alpha * exp (-gamma * (1 - infvalue) / infvalue ) 
 
-phi gamma infvalue = alpha * exp (-gamma * (1 - infvalue) / infvalue ) 
+updateOrder xs = map abs $ getZipList $ (-) <$> ZipList normalized_influence <*> ZipList delta_it
+  where
+    normalized_influence = map (/acc_influence) xs
+    acc_influence        = sum xs
+    n          = fromIntegral (length xs)
+    delta_it   = map (/n) xs        
+       
+
 
 -- | Compute the median of a list
 median :: (Ord a, Fractional a) => [a] -> a
@@ -80,8 +141,6 @@ median x =
      else ((sort x !! (n `div` 2 - 1)) + (sort x !! (n `div` 2))) / 2
     where n = length x
 
-data WNode a b = WNode {nid :: Vertex, weight :: b} 
-  deriving (Eq,Ord,Show)
 
 {-data Focal a b c =  Focal {
                           nid    :: a, -- node ID
@@ -90,21 +149,15 @@ data WNode a b = WNode {nid :: Vertex, weight :: b}
                           } deriving Show
 -}
 
-modWeight f a = WNode (nid a) (f $ weight a)
+--modWeight f a = WNode (nid a) (f $ weight a)
 
-  
-
---data WEdge a b c  = WEdge {src :: a, dst :: b, weight :: c}
---  deriving (Eq, Ord, Show)  
---individuation xs = 
-
-infdet graph = Prelude.map (\elem -> (influence' 100) <$>  [elem] <*> neighborSearch graph (snd elem) ) $ assocs graph
+--infdet graph = Prelude.map (\elem -> (influence' 100) <$>  [elem] <*> neighborSearch graph (snd elem) ) $ assocs graph
 
 
-gamma f xs = 1 / (median eta)
+{-gamma f xs = 1 / (median eta)
   where
     eta = Prelude.map (\elem -> f . weight $ snd elem ) xs
- 
+ -}
    
 {-massassign xs = Prelude.map (\x -> modWeight (phi gammaV) x) xs
   where
